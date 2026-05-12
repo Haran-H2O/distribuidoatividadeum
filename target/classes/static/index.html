@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>UTFPR E-Commerce</title>
+        <link rel="stylesheet" href="assets/css/style.css">
+    </head>
+    <body>
+        <header>
+            <div>
+                <h1>UTFPR E-Commerce</h1>
+                <span>Arquitetura de Sistemas Distribuídos — Atividade 1</span>
+            </div>
+        </header>
+
+        <div class="container">
+            <div class="grid">
+                <div>
+                    <div class="card">
+                        <h2>Catálogo de Produtos</h2>
+                        <div id="produtos-grid" class="produtos-grid">
+                            <p style="color:#aaa;font-size:0.85rem">Carregando produtos...</p>
+                        </div>
+                    </div>
+
+                    <div id="resultado" class="resultado">
+                        <div id="resultado-header" class="resultado-header">
+                            <h3 id="resultado-titulo">Pedido Concluído</h3>
+                            <p id="resultado-subtitulo"></p>
+                        </div>
+                        <div class="resultado-body">
+                            <div class="info-grid" id="resultado-info"></div>
+                            <div style="margin-top:16px">
+                                <div class="secao-title">Fluxo de Orquestração</div>
+                                <ul class="etapas" id="etapas-list"></ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display:flex;flex-direction:column;gap:16px">
+                    <div class="card">
+                        <h2>Carrinho <span id="cart-count-badge"></span></h2>
+                        <div id="carrinho-lista">
+                            <p class="empty-cart">Nenhum produto adicionado</p>
+                        </div>
+                        <div id="carrinho-total" style="display:none" class="carrinho-total">
+                            <span>Total</span>
+                            <span id="total-valor">R$ 0,00</span>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h2>Finalizar Compra</h2>
+
+                        <div class="form-group">
+                            <label>E-mail</label>
+                            <input type="email" id="email" placeholder="seu@email.com">
+                        </div>
+
+                        <div class="secao">
+                            <div class="secao-title">Endereço de Entrega</div>
+                            <div class="form-group">
+                                <label>CEP</label>
+                                <div class="cep-row">
+                                    <input type="text" id="cep" placeholder="00000-000" maxlength="9">
+                                    <button class="btn btn-outline" onclick="buscarCep()">Buscar</button>
+                                </div>
+                                <div class="cep-info" id="cep-info"></div>
+                            </div>
+                        </div>
+
+                        <div class="secao">
+                            <div class="secao-title">Dados do Cartão</div>
+                            <div class="form-group">
+                                <label>Número do Cartão</label>
+                                <input type="text" id="cartao-numero" placeholder="0000 0000 0000 0000" maxlength="19">
+                            </div>
+                            <div class="form-group">
+                                <label>Nome no Cartão</label>
+                                <input type="text" id="cartao-nome" placeholder="NOME SOBRENOME">
+                            </div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                                <div class="form-group">
+                                    <label>Validade</label>
+                                    <input type="text" id="cartao-validade" placeholder="MM/AA" maxlength="5">
+                                </div>
+                                <div class="form-group">
+                                    <label>CVV</label>
+                                    <input type="text" id="cartao-cvv" placeholder="000" maxlength="3">
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary" id="btn-comprar" onclick="realizarCompra()">
+                            Confirmar Compra
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="assets/js/app.js"></script>
+    </body>
+</html>
