@@ -10,7 +10,7 @@
         <header>
             <div>
                 <h1>UTFPR E-Commerce</h1>
-                <span>Arquitetura de Sistemas Distribuídos — Atividade 1</span>
+                <span>Arquitetura de Sistemas Distribuídos — Atividade 2 (RabbitMQ)</span>
             </div>
         </header>
 
@@ -91,6 +91,14 @@
                                     <input type="text" id="cartao-cvv" placeholder="000" maxlength="3">
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="secao">
+                            <div class="secao-title">Opções de Teste</div>
+                            <label class="simular-erro-label">
+                                <input type="checkbox" id="simular-erro">
+                                Simular erro de pagamento (valor negativo → DLQ)
+                            </label>
                         </div>
 
                         <button class="btn btn-primary" id="btn-comprar" onclick="realizarCompra()">

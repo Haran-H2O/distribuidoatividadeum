@@ -2,6 +2,7 @@ C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\dis
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\cep\provider\CepService.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\cep\provider\Endereco.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\config\JerseyConfig.java
+C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\config\RabbitMQConfig.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\Distribuidoatividadeum.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\DistribuidoatividadeumApplication.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\email\provider\EmailRequest.java
@@ -19,6 +20,11 @@ C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\dis
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\loja\provider\CompraResponse.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\loja\provider\LojaResource.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\loja\provider\LojaService.java
+C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\mensagens\EmailMessage.java
+C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\mensagens\EntregaMessage.java
+C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\mensagens\EstoqueMessage.java
+C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\mensagens\FiscalMessage.java
+C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\mensagens\PedidoMessage.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\pagamento\provider\PagamentoRequest.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\pagamento\provider\PagamentoResource.java
 C:\Users\Sins\Desktop\work\distribuidoatividadeum\src\main\java\br\com\utfpr\distribuidoatividadeum\pagamento\provider\PagamentoResponse.java

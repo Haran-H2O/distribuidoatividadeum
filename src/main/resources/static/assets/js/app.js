@@ -15,12 +15,12 @@ function renderProdutos() {
     const grid = document.getElementById('produtos-grid');
     grid.innerHTML = produtos.map(p => `
         <div class="produto-card">
+            <img class="produto-img" src="${p.urlImagem}" alt="${p.nome}" onerror="this.style.display='none'">
             <h3>${p.nome}</h3>
-            <p class="desc">${p.descricao}</p>
             <p class="preco">R$ ${p.preco.toFixed(2).replace('.', ',')}</p>
-            <p class="estoque">Estoque: ${p.estoque} un.</p>
-            <button class="btn btn-primary" onclick="adicionarAoCarrinho(${p.id})" ${p.estoque === 0 ? 'disabled' : ''}>
-                ${p.estoque === 0 ? 'Sem estoque' : 'Adicionar ao Carrinho'}
+            <p class="estoque">Estoque: ${p.quantidadeEmEstoque} un.</p>
+            <button class="btn btn-primary" onclick="adicionarAoCarrinho('${p.id}')" ${p.quantidadeEmEstoque === 0 ? 'disabled' : ''}>
+                ${p.quantidadeEmEstoque === 0 ? 'Sem estoque' : 'Adicionar ao Carrinho'}
             </button>
         </div>
     `).join('');
@@ -31,7 +31,7 @@ function adicionarAoCarrinho(produtoId) {
     if (!produto) return;
     const existente = carrinho.find(c => c.id === produtoId);
     if (existente) {
-        if (existente.quantidade < produto.estoque) existente.quantidade++;
+        if (existente.quantidade < produto.quantidadeEmEstoque) existente.quantidade++;
     } else {
         carrinho.push({ ...produto, quantidade: 1 });
     }
@@ -66,9 +66,9 @@ function renderCarrinho() {
         <div class="carrinho-item">
             <span class="nome">${c.nome}</span>
             <div class="qtd">
-                <button onclick="alterarQuantidade(${c.id}, -1)">−</button>
+                <button onclick="alterarQuantidade('${c.id}', -1)">−</button>
                 <span>${c.quantidade}</span>
-                <button onclick="alterarQuantidade(${c.id}, +1)">+</button>
+                <button onclick="alterarQuantidade('${c.id}', +1)">+</button>
             </div>
             <span class="total-item">R$ ${(c.preco * c.quantidade).toFixed(2).replace('.', ',')}</span>
         </div>
@@ -109,6 +109,7 @@ async function realizarCompra() {
     const email = document.getElementById('email').value.trim();
     const cep = document.getElementById('cep').value.replace(/\D/g, '');
     const cartaoNumero = document.getElementById('cartao-numero').value.replace(/\s/g, '');
+    const simularErro = document.getElementById('simular-erro').checked;
 
     if (!email) { alert('Informe seu e-mail'); return; }
     if (cep.length !== 8) { alert('Informe um CEP válido'); return; }
@@ -124,7 +125,8 @@ async function realizarCompra() {
         quantidade: primeiroItem.quantidade,
         cep: cep,
         email: email,
-        cartao: cartaoNumero
+        cartao: cartaoNumero,
+        simularErro: simularErro
     };
 
     try {
@@ -151,42 +153,44 @@ function exibirResultado(data) {
     const info = document.getElementById('resultado-info');
     const etapasList = document.getElementById('etapas-list');
 
-    const concluido = data.status === 'CONCLUIDO';
-    header.className = 'resultado-header' + (concluido ? '' : ' erro');
-    titulo.textContent = concluido
-        ? 'Pedido #' + data.pedidoId + ' Concluído'
-        : 'Erro no Pedido #' + data.pedidoId;
-    subtitulo.textContent = concluido
-        ? data.produto + ' — R$ ' + data.valorTotal.toFixed(2).replace('.', ',')
-        : (data.notaFiscal && data.notaFiscal.mensagem) || 'Erro durante o processamento';
+    const processando = data.status === 'PROCESSANDO';
+    const erro = data.status === 'ERRO';
 
-    if (concluido) {
+    if (processando) {
+        header.className = 'resultado-header processando';
+        titulo.textContent = 'Pedido #' + data.pedidoId + ' em Processamento';
+        subtitulo.textContent = data.produto
+            ? data.produto + ' — R$ ' + data.valorTotal.toFixed(2).replace('.', ',')
+            : '';
         info.innerHTML = `
             <div class="info-box">
-                <div class="label">Pagamento</div>
-                <div class="value">${data.pagamento.status}</div>
-                <div style="font-size:0.75rem;color:#888;margin-top:2px">${data.pagamento.transacaoId}</div>
-            </div>
-            <div class="info-box">
-                <div class="label">Nota Fiscal</div>
-                <div class="value">${data.notaFiscal.chaveNF}</div>
-                <div style="font-size:0.75rem;color:#888;margin-top:2px">${data.notaFiscal.status}</div>
-            </div>
-            <div class="info-box">
-                <div class="label">Rastreio</div>
-                <div class="value">${data.entrega.codigoRastreio}</div>
-                <div style="font-size:0.75rem;color:#888;margin-top:2px">Previsão: ${data.entrega.previsaoEntrega}</div>
+                <div class="label">Status</div>
+                <div class="value">PROCESSANDO</div>
             </div>
             <div class="info-box">
                 <div class="label">Endereço</div>
-                <div class="value" style="font-size:0.78rem">${data.endereco}</div>
+                <div class="value" style="font-size:0.78rem">${data.endereco || '—'}</div>
+            </div>
+            <div class="info-box" style="grid-column:1/-1">
+                <div class="label">Informação</div>
+                <div class="value" style="font-size:0.82rem;font-weight:400">${data.mensagem}</div>
             </div>
         `;
-    } else {
+        etapasList.innerHTML = '';
+    } else if (erro) {
+        header.className = 'resultado-header erro';
+        titulo.textContent = 'Erro no Pedido #' + data.pedidoId;
+        subtitulo.textContent = data.mensagem || 'Erro durante o processamento';
         info.innerHTML = '';
+        etapasList.innerHTML = '';
+    } else {
+        header.className = 'resultado-header';
+        titulo.textContent = 'Pedido #' + data.pedidoId + ' Concluído';
+        subtitulo.textContent = data.produto + ' — R$ ' + data.valorTotal.toFixed(2).replace('.', ',');
+        info.innerHTML = '';
+        etapasList.innerHTML = '';
     }
 
-    etapasList.innerHTML = (data.etapas || []).map(e => `<li>${e}</li>`).join('');
     resultado.className = 'resultado show';
     resultado.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }

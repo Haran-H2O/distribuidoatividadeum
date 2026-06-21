@@ -1,8 +1,5 @@
 package br.com.utfpr.distribuidoatividadeum.loja.provider;
 
-import java.util.List;
-import java.util.Map;
-
 public class CompraResponse {
     private Long pedidoId;
     private String status;
@@ -10,10 +7,7 @@ public class CompraResponse {
     private Integer quantidade;
     private Double valorTotal;
     private String endereco;
-    private Map<String, Object> pagamento;
-    private Map<String, Object> notaFiscal;
-    private Map<String, Object> entrega;
-    private List<String> etapas;
+    private String mensagem;
 
     public CompraResponse() {}
 
@@ -29,12 +23,6 @@ public class CompraResponse {
     public void setValorTotal(Double valorTotal) { this.valorTotal = valorTotal; }
     public String getEndereco() { return endereco; }
     public void setEndereco(String endereco) { this.endereco = endereco; }
-    public Map<String, Object> getPagamento() { return pagamento; }
-    public void setPagamento(Map<String, Object> pagamento) { this.pagamento = pagamento; }
-    public Map<String, Object> getNotaFiscal() { return notaFiscal; }
-    public void setNotaFiscal(Map<String, Object> notaFiscal) { this.notaFiscal = notaFiscal; }
-    public Map<String, Object> getEntrega() { return entrega; }
-    public void setEntrega(Map<String, Object> entrega) { this.entrega = entrega; }
-    public List<String> getEtapas() { return etapas; }
-    public void setEtapas(List<String> etapas) { this.etapas = etapas; }
+    public String getMensagem() { return mensagem; }
+    public void setMensagem(String mensagem) { this.mensagem = mensagem; }
 }

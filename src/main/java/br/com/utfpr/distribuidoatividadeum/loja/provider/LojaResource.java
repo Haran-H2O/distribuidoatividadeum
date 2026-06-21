@@ -1,11 +1,14 @@
 package br.com.utfpr.distribuidoatividadeum.loja.provider;
 
+import br.com.utfpr.distribuidoatividadeum.cep.provider.Endereco;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import kong.unirest.Unirest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+
+import java.util.Map;
 
 @Component
 @Path("/loja")
@@ -27,10 +30,11 @@ public class LojaResource {
     @GET
     @Path("/cep/{cep}")
     public Response consultarCep(@PathParam("cep") String cep) {
-        kong.unirest.HttpResponse<String> resp = Unirest.get(BASE + "/cep/{cep}")
-            .routeParam("cep", cep)
-            .asString();
-        return Response.status(resp.getStatus()).entity(resp.getBody()).build();
+        Endereco endereco = lojaService.consultarCep(cep);
+        if (endereco == null) {
+            return Response.ok(Map.of("erro", true)).build();
+        }
+        return Response.ok(endereco).build();
     }
 
     @POST

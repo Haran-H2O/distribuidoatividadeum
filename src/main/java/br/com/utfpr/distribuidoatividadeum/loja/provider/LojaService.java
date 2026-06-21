@@ -1,16 +1,19 @@
 package br.com.utfpr.distribuidoatividadeum.loja.provider;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import br.com.utfpr.distribuidoatividadeum.cep.provider.Endereco;
+import br.com.utfpr.distribuidoatividadeum.mensagens.EmailMessage;
+import br.com.utfpr.distribuidoatividadeum.mensagens.PedidoMessage;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.io.File;
+import java.io.FileWriter;
+import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicLong;
 
 @Service
@@ -20,136 +23,66 @@ public class LojaService {
     private final AtomicLong pedidoCounter = new AtomicLong(1000);
     private final ObjectMapper mapper = new ObjectMapper();
 
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    public Endereco consultarCep(String cep) {
+        System.out.println("[→ FILA] fila.cep | consultando CEP " + cep + " via RPC");
+        Object result = rabbitTemplate.convertSendAndReceive("fila.cep", cep);
+        if (result == null) return null;
+        return mapper.convertValue(result, Endereco.class);
+    }
+
     public CompraResponse realizarCompra(CompraRequest request) {
         Long pedidoId = pedidoCounter.incrementAndGet();
-        List<String> etapas = new ArrayList<>();
-
         try {
             String produtoBody = Unirest.get(BASE + "/produtos/{id}")
-                .routeParam("id", request.getProdutoId().toString())
+                .routeParam("id", request.getProdutoId())
                 .asString().getBody();
             JsonNode produtoJson = mapper.readTree(produtoBody);
 
             if (produtoJson.has("erro")) {
-                throw new RuntimeException("Produto #" + request.getProdutoId() + " não encontrado");
+                throw new RuntimeException("Produto não encontrado: " + request.getProdutoId());
             }
 
             String nomeProduto = produtoJson.get("nome").asText();
             double preco = produtoJson.get("preco").asDouble();
             double valorTotal = preco * request.getQuantidade();
 
-            String cepBody = Unirest.get(BASE + "/cep/{cep}")
-                .routeParam("cep", request.getCep())
-                .asString().getBody();
-            JsonNode cepJson = mapper.readTree(cepBody);
+            Endereco endereco = consultarCep(request.getCep());
+            String enderecoStr = endereco != null
+                ? endereco.getLogradouro() + ", " + endereco.getBairro() + " - " + endereco.getLocalidade() + "/" + endereco.getUf()
+                : "CEP " + request.getCep() + " (não localizado)";
 
-            String endereco;
-            if (cepJson.has("erro")) {
-                endereco = "CEP " + request.getCep() + " (não localizado)";
-            } else {
-                endereco = cepJson.path("logradouro").asText("") + ", "
-                    + cepJson.path("bairro").asText("") + " - "
-                    + cepJson.path("localidade").asText("") + "/"
-                    + cepJson.path("uf").asText("");
-            }
+            System.out.println("[→ FILA] fila.email | confirmação de compra para " + request.getEmail());
+            rabbitTemplate.convertAndSend("fila.email", new EmailMessage(
+                "CONFIRMACAO_COMPRA",
+                request.getEmail(),
+                "Pedido #" + pedidoId + " confirmado: " + nomeProduto + " x" + request.getQuantidade()
+            ));
 
-            Map<String, Object> emailConfirmacao = new HashMap<>();
-            emailConfirmacao.put("tipo", "CONFIRMACAO_COMPRA");
-            emailConfirmacao.put("destinatario", request.getEmail());
-            emailConfirmacao.put("conteudo", "Pedido #" + pedidoId + " confirmado: " + nomeProduto + " x" + request.getQuantidade());
-            Unirest.post(BASE + "/email/enviar")
-                .header("Content-Type", "application/json")
-                .body(mapper.writeValueAsString(emailConfirmacao))
-                .asString();
-            etapas.add("E-mail de confirmação de compra enviado");
+            double valorPagamento = Boolean.TRUE.equals(request.getSimularErro()) ? -valorTotal : valorTotal;
+            System.out.println("[→ FILA] fila.pagamento | pedido #" + pedidoId + " | R$ " + String.format("%.2f", valorPagamento));
+            rabbitTemplate.convertAndSend("fila.pagamento", new PedidoMessage(
+                pedidoId,
+                request.getProdutoId(),
+                request.getQuantidade(),
+                valorPagamento,
+                request.getEmail(),
+                enderecoStr,
+                request.getSimularErro()
+            ));
 
-            Map<String, Object> pagamentoReq = new HashMap<>();
-            pagamentoReq.put("pedidoId", pedidoId);
-            pagamentoReq.put("valor", valorTotal);
-            pagamentoReq.put("cartao", request.getCartao());
-            pagamentoReq.put("email", request.getEmail());
-            String pagamentoBody = Unirest.post(BASE + "/pagamento/processar")
-                .header("Content-Type", "application/json")
-                .body(mapper.writeValueAsString(pagamentoReq))
-                .asString().getBody();
-            JsonNode pagamentoJson = mapper.readTree(pagamentoBody);
-            Map<String, Object> pagamentoMap = mapper.convertValue(pagamentoJson, new TypeReference<>() {});
-            etapas.add("Pagamento " + pagamentoJson.path("status").asText());
-
-            Map<String, Object> emailPagamento = new HashMap<>();
-            emailPagamento.put("tipo", "RESULTADO_PAGAMENTO");
-            emailPagamento.put("destinatario", request.getEmail());
-            emailPagamento.put("conteudo", "Transação " + pagamentoJson.path("transacaoId").asText() + " — " + pagamentoJson.path("status").asText());
-            Unirest.post(BASE + "/email/enviar")
-                .header("Content-Type", "application/json")
-                .body(mapper.writeValueAsString(emailPagamento))
-                .asString();
-            etapas.add("E-mail com resultado do pagamento enviado");
-
-            Map<String, Object> fiscalReq = new HashMap<>();
-            fiscalReq.put("pedidoId", pedidoId);
-            fiscalReq.put("produtoId", request.getProdutoId());
-            fiscalReq.put("quantidade", request.getQuantidade());
-            fiscalReq.put("valorTotal", valorTotal);
-            fiscalReq.put("email", request.getEmail());
-            HttpResponse<String> fiscalHttpResp = Unirest.post(BASE + "/fiscal/emitir")
-                .header("Content-Type", "application/json")
-                .body(mapper.writeValueAsString(fiscalReq))
-                .asString();
-            if (fiscalHttpResp.getStatus() != 200) {
-                throw new RuntimeException("Falha ao emitir nota fiscal: estoque insuficiente");
-            }
-            JsonNode fiscalJson = mapper.readTree(fiscalHttpResp.getBody());
-            Map<String, Object> fiscalMap = mapper.convertValue(fiscalJson, new TypeReference<>() {});
-            etapas.add("Nota fiscal " + fiscalJson.path("chaveNF").asText() + " emitida");
-
-            Map<String, Object> emailNF = new HashMap<>();
-            emailNF.put("tipo", "NOTA_FISCAL");
-            emailNF.put("destinatario", request.getEmail());
-            emailNF.put("conteudo", "NF " + fiscalJson.path("chaveNF").asText() + " disponível");
-            Unirest.post(BASE + "/email/enviar")
-                .header("Content-Type", "application/json")
-                .body(mapper.writeValueAsString(emailNF))
-                .asString();
-            etapas.add("E-mail com nota fiscal enviado");
-
-            Map<String, Object> entregaReq = new HashMap<>();
-            entregaReq.put("pedidoId", pedidoId);
-            entregaReq.put("enderecoEntrega", endereco);
-            entregaReq.put("produtoId", request.getProdutoId());
-            entregaReq.put("quantidade", request.getQuantidade());
-            entregaReq.put("email", request.getEmail());
-            String entregaBody = Unirest.post(BASE + "/entrega/disponibilizar")
-                .header("Content-Type", "application/json")
-                .body(mapper.writeValueAsString(entregaReq))
-                .asString().getBody();
-            JsonNode entregaJson = mapper.readTree(entregaBody);
-            Map<String, Object> entregaMap = mapper.convertValue(entregaJson, new TypeReference<>() {});
-            etapas.add("Entrega disponibilizada — rastreio: " + entregaJson.path("codigoRastreio").asText());
-
-            Map<String, Object> emailEntrega = new HashMap<>();
-            emailEntrega.put("tipo", "DADOS_ENTREGA");
-            emailEntrega.put("destinatario", request.getEmail());
-            emailEntrega.put("conteudo", "Rastreio " + entregaJson.path("codigoRastreio").asText() + " | Previsão: " + entregaJson.path("previsaoEntrega").asText());
-            Unirest.post(BASE + "/email/enviar")
-                .header("Content-Type", "application/json")
-                .body(mapper.writeValueAsString(emailEntrega))
-                .asString();
-            etapas.add("E-mail com dados de entrega enviado");
-
-            System.out.println("COMPRA CONCLUIDA: pedido #" + pedidoId + " | " + nomeProduto + " | R$ " + String.format("%.2f", valorTotal));
+            System.out.println("COMPRA INICIADA: pedido #" + pedidoId + " | " + nomeProduto + " | R$ " + String.format("%.2f", valorTotal));
 
             CompraResponse response = new CompraResponse();
             response.setPedidoId(pedidoId);
-            response.setStatus("CONCLUIDO");
+            response.setStatus("PROCESSANDO");
             response.setProduto(nomeProduto);
             response.setQuantidade(request.getQuantidade());
             response.setValorTotal(valorTotal);
-            response.setEndereco(endereco);
-            response.setPagamento(pagamentoMap);
-            response.setNotaFiscal(fiscalMap);
-            response.setEntrega(entregaMap);
-            response.setEtapas(etapas);
+            response.setEndereco(enderecoStr);
+            response.setMensagem("Pedido recebido. O pagamento e demais etapas estão sendo processados via fila.");
             return response;
 
         } catch (Exception e) {
@@ -157,11 +90,25 @@ public class LojaService {
             CompraResponse response = new CompraResponse();
             response.setPedidoId(pedidoId);
             response.setStatus("ERRO");
-            response.setEtapas(etapas);
-            Map<String, Object> erroMap = new HashMap<>();
-            erroMap.put("mensagem", e.getMessage());
-            response.setNotaFiscal(erroMap);
+            response.setMensagem(e.getMessage());
             return response;
+        }
+    }
+
+    @RabbitListener(queues = "fila.pagamento.dlq")
+    public void processarDlq(PedidoMessage pedido) {
+        System.out.println("[← FILA] fila.pagamento.dlq | pedido #" + pedido.getPedidoId() + " rejeitado");
+        String msg = "ERRO PAGAMENTO DLQ: pedido #" + pedido.getPedidoId() + " | valor: " + pedido.getValor();
+        System.out.println(msg);
+        try {
+            File dir = new File("logs");
+            dir.mkdirs();
+            try (FileWriter fw = new FileWriter("logs/pagamento-errors.log", true)) {
+                fw.write(LocalDateTime.now() + " | " + msg + "\n");
+            }
+            System.out.println("LOG DLQ: gravado em logs/pagamento-errors.log");
+        } catch (Exception e) {
+            System.out.println("ERRO ao gravar log DLQ: " + e.getMessage());
         }
     }
 }

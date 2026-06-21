@@ -25,7 +25,7 @@ public class ProdutosResource {
 
     @GET
     @Path("/{id}")
-    public Response buscar(@PathParam("id") Long id) {
+    public Response buscar(@PathParam("id") String id) {
         Optional<Produto> produto = produtosService.buscarPorId(id);
         if (produto.isEmpty()) {
             return Response.status(Response.Status.NOT_FOUND)
@@ -33,19 +33,5 @@ public class ProdutosResource {
                 .build();
         }
         return Response.ok(produto.get()).build();
-    }
-
-    @POST
-    @Path("/{id}/baixar-estoque")
-    public Response baixarEstoque(@PathParam("id") Long id, Map<String, Integer> body) {
-        Integer quantidade = body.get("quantidade");
-        boolean sucesso = produtosService.baixarEstoque(id, quantidade);
-        if (!sucesso) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                .entity(Map.of("sucesso", false, "erro", "Estoque insuficiente"))
-                .build();
-        }
-        int estoqueAtual = produtosService.buscarPorId(id).map(Produto::getEstoque).orElse(0);
-        return Response.ok(Map.of("sucesso", true, "estoqueAtual", estoqueAtual)).build();
     }
 }
